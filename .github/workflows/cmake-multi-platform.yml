@@ -52,7 +52,7 @@ jobs:
         $words=' '
         $words2=
         $winsdkinclude=
-        cmake -G Ninja -DCMAKE_CXX_COMPILER=cl -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_FLAGS="`"-ID:/a/ci/ci/program files/more rspaces/$((ls 'D:/a/ci/ci/pro files/more spaces/')[0].name)`"" -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DCMAKE_BUILD_TYPE=Release -S ..
+        cmake -G Ninja -DCMAKE_CXX_COMPILER=cl -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_FLAGS="`"-ID:/a/ci2/ci2/program files/more rspaces/$((ls 'D:/a/ci2/ci2/pro files/more spaces/')[0].name)`"" -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DCMAKE_BUILD_TYPE=Release -S ..
         ninja
         cd ..
         ./ci
