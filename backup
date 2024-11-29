@@ -1,0 +1,137 @@
+name: cmake win64 
+#i give up
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        build_type: [Release]
+        c_compiler: [gcc]
+        include:
+          - os: windows-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: update submodules
+      run: |
+        git submodule update --init --recursive
+    - name: installing more depens
+      run: |
+        choco install -y ninja openssl 7zip
+        choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --apply-install-arguments-to-dependencies
+        $env:OPENSSL_ROOT_DIR="C:/Program Files/OpenSSL"
+        $env:OPENSSL_INCLUDE_DIR="C:/Program Files/OpenSSL/include"
+        $env:OPENSSL_CRYPTO_LIBRARY="C:/Program Files/OpenSSL/lib/libcrypto.lib"
+        $env:OPENSSL_SSL_LIBRARY="C:/Program Files/OpenSSL/lib/libssl.lib"
+        $env:PATH="C:/Program Files/OpenSSL/bin;$env:PATH"
+        echo "OPENSSL_ROOT_DIR=C:/Program Files/OpenSSL" | tee -a $env:GITHUB_ENV
+        echo "OPENSSL_INCLUDE_DIR=C:/Program Files/OpenSSL/include" | tee -a $env:GITHUB_ENV
+        echo "OPENSSL_CRYPTO_LIBRARY=C:/Program Files/OpenSSL/lib/libcrypto.lib" | tee -a $env:GITHUB_ENV
+        echo "OPENSSL_SSL_LIBRARY=C:/Program Files/OpenSSL/lib/libssl.lib" | tee -a $env:GITHUB_ENV
+        echo "PATH=C:/Program Files/OpenSSL/bin;$env:PATH" | tee -a $env:GITHUB_ENV
+        cd D:/a/raw/raw/sub/protobuf
+        mkdir build_dir
+        cd build_dir
+        cmake -G Ninja -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DCMAKE_BUILD_TYPE=Release -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_BUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=C:/sdk/protobuf -S ..
+        ninja
+        ninja install
+        $env:Protobuf_INCLUDE_DIR="C:/sdk/protobuf/include"
+        echo "Protobuf_INCLUDE_DIR=C:/sdk/protobuf/include" | tee -a $env:GITHUB_ENV
+        $env:Protobuf_LIB_DIR="C:/sdk/protobuf/lib"
+        echo "Protobuf_LIB_DIR=C:/sdk/protobuf/lib" | tee -a $env:GITHUB_ENV
+        $env:PATH="c:/sdk/protobuf/bin;$env:PATH"
+        echo "PATH=c:/sdk/protobuf/bin;$env:PATH" | tee -a $env:GITHUB_ENV
+        cd D:/a/raw/raw/sub/gns
+        mkdir build
+        cd build
+        cmake -G Ninja -DCMAKE_CXX_FLAGS="-IC:/Program Files (x86)/Windows Kits/10/Include/$((ls 'C:/Program Files (x86)/Windows Kits/10/Include')[0].name)/um" DCMAKE_LIBRARY_PATH="C:/Program Files (x86)/Windows Kits/10/Lib/$((ls 'C:/Program Files (x86)/Windows Kits/10/Include')[0].name)/um" -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DCMAKE_BUILD_TYPE=Release -DProtobuf_INCLUDE_DIR="C:/sdk/protobuf/include" -DProtobuf_LIB_DIR="C:/sdk/protobuf/lib" -S ..
+        ninja
+        mkdir D:/a/raw/raw/lib
+        ls -r
+        cp lib/GameNetworkingSockets.lib D:/a/raw/raw/lib/GameNetworkingSockets.lib
+        cp bin/GameNetworkingSockets.dll D:/a/raw/raw/lib/GameNetworkingSockets.dll
+        $env:PATH="D:/a/work/raw/raw/lib;$env:PATH"
+        echo PATH=D:/a/work/raw/raw/lib;$env:PATH >> $GITHUB_ENV
+    - name: installing vulkan sdk
+      run: |
+        mkdir D:/a/vulk
+        cd D:/a/vulk
+        wget -q -O - https://sdk.lunarg.com/sdk/download/latest/windows/vulkan_sdk.exe
+        powershell $((ls)[0].name) --da --al -c --am --verbose
+        $env:VULKAN_SDK=$(pwd).path
+        $env:PATH="$env:VULKAN_SDK/bin;$env:PATH"
+        $env:LD_LIBRARY_PATH="$env:VULKAN_SDK/lib;$env:LD_LIBRARY_PATH"
+        $env:VK_ICD_FILENAMES="$env:VULKAN_SDK/etc/vulkan/icd.d"
+        $env:VK_LAYER_PATH="$env:VULKAN_SDK/etc/vulkan/explicit_layer.d"
+        $env:LD_LIBRARY_PATH="D:/a/work/raw/raw/lib;$env:LD_LIBRARY_PATH"
+        echo VULKAN_SDK=$env:VULKAN_SDK >> $env:GITHUB_ENV
+        echo PATH=$VULKAN_SDK/bin;$env:PATH >> $env:GITHUB_ENV
+        echo LD_LIBRARY_PATH=$env:VULKAN_SDK/lib;$env:LD_LIBRARY_PATH >> $env:GITHUB_ENV
+        echo VK_ICD_FILENAMES=$env:VULKAN_SDK/etc/vulkan/icd.d >> $env:GITHUB_ENV
+        echo VK_LAYER_PATH=$env:VULKAN_SDK/etc/vulkan/explicit_layer.d >> $env:GITHUB_ENV
+        echo LD_LIBRARY_PATH=D:/a/work/raw/raw/lib;$env:LD_LIBRARY_PATH >> $env:GITHUB_ENV
+    # - name: vulkan_ci
+    #   uses: NcStudios/VulkanCI@v1.1
+    - name: verifying vulkan
+      run: |
+        # mkdir $VULKAN_SDK/bin
+        # cp D:/a/vulk/bin/glslc.exe $VULKAN_SDK/bin/glslc
+        $VULKAN_SDK/bin/glslc --version
+        echo $VULKAN_SDK
+        ls -laR $VULKAN_SDK
+    - name: downloading resources
+      run: |
+        #todo compress with tar pipe to 7z to un/compress without saving file
+        mkdir D:/a/raw/raw/resources
+        cd D:/a/raw/raw/resources
+        curl -L "https://drive.google.com/uc?export=download&id=1ZwYuB17yq-yRpswRISuvSG-_R7j5GKM9" -o x.7z
+        7z x x.7z -aoa
+        rm x.7z
+
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+    - name: Configure CMake
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -G Ninja
+        -S ${{ github.workspace }}
+
+    - name: Build
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: ninja
+    - name: Test
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: ls -r
+    - name: resources n shaders
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: |
+        ls resources
+        ls shaders
+    - name: ctest
+      run: ctest --build-config ${{ matrix.build_type }}
+    - name: swiftshader test
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: |
+        ./raw &
